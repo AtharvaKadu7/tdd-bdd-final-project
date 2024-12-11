@@ -84,7 +84,7 @@ class Product(db.Model):
     # INSTANCE METHODS
     ##################################################
 
-    def __repr__(self):
+    def _repr_(self):
         return f"<Product {self.name} id=[{self.id}]>"
 
     def create(self):

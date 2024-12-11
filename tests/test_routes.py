@@ -130,20 +130,6 @@ class TestProductRoutes(TestCase):
         self.assertEqual(new_product["available"], test_product.available)
         self.assertEqual(new_product["category"], test_product.category.name)
 
-        #
-        # Uncomment this code once READ is implemented
-        #
-
-        # # Check that the location header was correct
-        # response = self.client.get(location)
-        # self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # new_product = response.get_json()
-        # self.assertEqual(new_product["name"], test_product.name)
-        # self.assertEqual(new_product["description"], test_product.description)
-        # self.assertEqual(Decimal(new_product["price"]), test_product.price)
-        # self.assertEqual(new_product["available"], test_product.available)
-        # self.assertEqual(new_product["category"], test_product.category.name)
-
     def test_create_product_with_no_name(self):
         """It should not Create a Product without a name"""
         product = self._create_products()[0]
@@ -163,18 +149,79 @@ class TestProductRoutes(TestCase):
         response = self.client.post(BASE_URL, data={}, content_type="plain/text")
         self.assertEqual(response.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
 
-    #
-    # ADD YOUR TEST CASES HERE
-    #
+    # ----------------------------------------------------------
+    # TEST LIST ALL PRODUCTS
+    # ----------------------------------------------------------
+    def test_list_products(self):
+        """It should list all Products"""
+        self._create_products(5)  # Create 5 products
+        response = self.client.get(BASE_URL)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(len(data), 5)  # Ensure 5 products are returned
+
+    # ----------------------------------------------------------
+    # TEST READ A PRODUCT
+    # ----------------------------------------------------------
+    def test_get_product(self):
+        """It should retrieve a product"""
+        products = self._create_products(1)  # Create 1 product
+        product_id = products[0].id
+        response = self.client.get(f"{BASE_URL}/{product_id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(data["id"], product_id)
+
+    def test_get_product_not_found(self):
+        """It should return 404 if the product is not found"""
+        response = self.client.get(f"{BASE_URL}/99999")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    # ----------------------------------------------------------
+    # TEST UPDATE A PRODUCT
+    # ----------------------------------------------------------
+    def test_update_product(self):
+        """It should update an existing product"""
+        products = self._create_products(1)  # Create 1 product
+        product = products[0]
+        product_data = product.serialize()
+        product_data["price"] = 19.99  # Update price
+
+        response = self.client.put(f"{BASE_URL}/{product.id}", json=product_data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        updated_product = response.get_json()
+        self.assertEqual(Decimal(updated_product["price"]), 19.99)
+
+    def test_update_product_not_found(self):
+        """It should return 404 if the product to update is not found"""
+        response = self.client.put(f"{BASE_URL}/99999", json={"name": "Updated Product"})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    # ----------------------------------------------------------
+    # TEST DELETE A PRODUCT
+    # ----------------------------------------------------------
+    def test_delete_product(self):
+        """It should delete a product"""
+        products = self._create_products(1)  # Create 1 product
+        product_id = products[0].id
+        response = self.client.delete(f"{BASE_URL}/{product_id}")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # Check that the product was deleted
+        response = self.client.get(f"{BASE_URL}/{product_id}")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_delete_product_not_found(self):
+        """It should return 404 if the product to delete is not found"""
+        response = self.client.delete(f"{BASE_URL}/99999")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     ######################################################################
     # Utility functions
     ######################################################################
-
     def get_product_count(self):
         """save the current number of products"""
         response = self.client.get(BASE_URL)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.get_json()
-        # logging.debug("data = %s", data)
         return len(data)
